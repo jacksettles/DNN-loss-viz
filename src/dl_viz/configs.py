@@ -21,6 +21,7 @@ class ConvLayerConfig:
     use_batch_norm: bool = True
     use_max_pool: bool = True
     pool_kernel_size: int = 2
+    use_skip_connection: bool = True
 
 @dataclass
 class CNNConfig:
@@ -29,9 +30,9 @@ class CNNConfig:
 
     conv_layers: Sequence[ConvLayerConfig] = field(
         default_factory=lambda: [
-            ConvLayerConfig(out_channels=32),
-            ConvLayerConfig(out_channels=64),
-            ConvLayerConfig(out_channels=128)
+            ConvLayerConfig(out_channels=32, use_skip_connection=False),
+            ConvLayerConfig(out_channels=64, use_skip_connection=False),
+            ConvLayerConfig(out_channels=128, use_skip_connection=False)
         ]
     )
 
