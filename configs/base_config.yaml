@@ -1,0 +1,2 @@
+model: "MiniCNN"
+data: "cifar10"
