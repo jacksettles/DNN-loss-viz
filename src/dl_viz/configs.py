@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Sequence, Literal
 
-import torch
-import torch.nn as nn
 
 ActivationName = Literal[
     "relu",
@@ -15,7 +13,7 @@ ActivationName = Literal[
 @dataclass
 class ConvLayerConfig:
     out_channels: int
-    kernel_zise: int = 3
+    kernel_size: int = 3
     stride: int = 1
     padding: int = 0
     use_batch_norm: bool = True
@@ -28,7 +26,7 @@ class CNNConfig:
     in_channels: int = 3
     num_classes: int = 10
 
-    conv_layers: Sequence[ConvLayerConfig] = field(
+    conv_layers: list[ConvLayerConfig] = field(
         default_factory=lambda: [
             ConvLayerConfig(out_channels=32, use_skip_connection=False),
             ConvLayerConfig(out_channels=64, use_skip_connection=False),

@@ -52,7 +52,7 @@ def build_transforms(
     return train_transform, test_transform
 
 
-def get_cifar10_datasets(
+def _get_cifar10_datasets(
     config: DataConfig,
 ) -> tuple[datasets.CIFAR10, datasets.CIFAR10]:
     train_transform, test_transform = build_transforms(
@@ -79,7 +79,7 @@ def get_cifar10_datasets(
 def get_cifar10_loaders(
     config: DataConfig,
 ) -> tuple[DataLoader, DataLoader]:
-    train_dataset, test_dataset = get_cifar10_datasets(config)
+    train_dataset, test_dataset = _get_cifar10_datasets(config)
 
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -99,4 +99,8 @@ def get_cifar10_loaders(
         drop_last=False,
     )
 
-    return train_loader, test_loader
+    return {
+        "train_data": train_loader,
+        "val_data": None,
+        "test_data": test_loader
+    }

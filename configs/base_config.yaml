@@ -1,2 +1,57 @@
-model: "MiniCNN"
-data: "cifar10"
+experiment:
+  name: "minicnn_cifar10_baseline"
+  seed: 42
+
+model:
+  name: "MiniCNN"
+  params:
+    in_channels: 3
+    num_classes: 10
+    activation: "relu"
+    classifier_hidden_dims: [128]
+
+    conv_layers:
+      - out_channels: 32
+        kernel_size: 3
+        padding: 1
+        use_batch_norm: true
+        use_max_pool: true
+        use_skip_connection: false
+
+      - out_channels: 64
+        kernel_size: 3
+        padding: 1
+        use_batch_norm: true
+        use_max_pool: true
+        use_skip_connection: false
+
+data:
+  dataset: "cifar10"
+  data_dir: "data"
+  batch_size: 128
+  num_workers: 2
+  use_augmentation: true
+
+training:
+  num_epochs: 10
+
+  criterion:
+    name: "cross_entropy_loss"
+
+  optimizer:
+    name: "AdamW"
+    params:
+      lr: 0.001
+      weight_decay: 0.0005
+
+  scheduler:
+    name: "StepLR"
+    params:
+      step_size: 5
+      gamma: 0.1
+
+checkpointing:
+  directory: "checkpoints"
+  save_every: 1
+  save_initial: true
+  save_final: true
