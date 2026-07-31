@@ -2,6 +2,7 @@ from typing import Any
 
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 
 from dl_viz.data import get_cifar10_loaders
@@ -20,11 +21,11 @@ MODEL_REGISTRY = {
     },
 }
 
-LOSS_REGISTRY = {
-    "cross_entropy_loss": nn.CrossEntropyLoss()
+LOSS_REGISTRY: dict[str, type[nn.Module]] = {
+    "cross_entropy_loss": nn.CrossEntropyLoss
 }
 
-OPTIMIZER_REGISTRY = {
+OPTIMIZER_REGISTRY: dict[str, type[Optimizer]] = {
     "SGD": optim.SGD,
     "Adam": optim.Adam,
     "AdamW": optim.AdamW,

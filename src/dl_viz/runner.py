@@ -1,6 +1,7 @@
+from __future__ import annotations
 
+from typing import Any, TYPE_CHECKING
 from pathlib import Path
-from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = PROJECT_ROOT / "configs"
@@ -8,14 +9,15 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 import yaml
 
-import torch.optim as optim
-import torch.nn as nn
+if TYPE_CHECKING:
+    import torch.nn as nn
+    from torch.optim import Optimizer
+    from torch.optim.lr_scheduler import LRScheduler
+    from torch.utils.data import DataLoader
+
 
 from dl_viz.trainer import Trainer
-from dl_viz.data import DataConfig, get_cifar10_loaders
-
-import dl_viz.models as dvm
-from dl_viz.configs import ConvLayerConfig, CNNConfig, ActivationName
+from dl_viz.data import DataConfig
 from dl_viz.registries import DATA_REGISTRY, MODEL_REGISTRY, LOSS_REGISTRY, OPTIMIZER_REGISTRY, SCHEDULER_REGISTRY
 
 
@@ -30,15 +32,14 @@ def load_configs(
     return configs
 
 def load_model(config: dict[str, Any]) -> nn.Module:
-    model_config = CNNConfig(
-        **config.get("model", {}).get("params", {})
-    )
+    model_dict = config.get("model", {})
 
-    model_name = model_config.get("name")
+    model_name = model_dict.get("name")
+    model_params = model_dict.get("params", {})
 
     if model_name is None:
         raise ValueError(
-            "Model config must contain a 'name' field."
+            "Model config must contain a 'model.name' field."
         )
 
     if model_name not in MODEL_REGISTRY:
@@ -49,11 +50,8 @@ def load_model(config: dict[str, Any]) -> nn.Module:
         )
 
     registry_entry = MODEL_REGISTRY[model_name]
-
     model_class = registry_entry["model_class"]
     config_class = registry_entry["config_class"]
-
-    model_params = model_config.get("params", {})
 
     if hasattr(config_class, "from_dict"):
         model_config = config_class.from_dict(model_params)
@@ -62,7 +60,7 @@ def load_model(config: dict[str, Any]) -> nn.Module:
 
     return model_class(model_config)
 
-def load_data(config: dict):
+def load_data(config: dict)-> dict[str, DataLoader | None]:
     raw_data_config = config.get("data", {})
 
     data_config = DataConfig(
@@ -91,62 +89,87 @@ def load_data(config: dict):
         )
     return DATA_REGISTRY[data_name](data_config)
 
-def load_criterion(training_config: dict):
-    criterion_name = training_config.get("criterion", {}).get("name", None)
+def load_criterion(
+    training_config: dict[str, Any],
+) -> nn.Module:
+    criterion_config = training_config.get("criterion", {})
+    criterion_name = criterion_config.get("name")
+    criterion_params = criterion_config.get("params", {})
 
     if criterion_name is None:
         raise ValueError(
-            "Training config must contain a 'criterion' field"
+            "Training config must contain a "
+            "'training.criterion.name' field."
         )
-    
+
     if criterion_name not in LOSS_REGISTRY:
         valid_criteria = ", ".join(LOSS_REGISTRY)
         raise ValueError(
             f"Unknown criterion/loss function {criterion_name!r}. "
-            f"Expected one of: {valid_criteria}"
+            f"Expected one of: {valid_criteria}."
         )
 
-    return LOSS_REGISTRY[criterion_name]
+    criterion_class = LOSS_REGISTRY[criterion_name]
+
+    return criterion_class(**criterion_params)
 
 
-def load_optimizer(training_config: dict, model: nn.Module):
-    optim_name = training_config.get("optimizer", {}).get("name", None)
-    optim_params = training_config.get("optimizer", {}).get("params", {})
+def load_optimizer(
+    training_config: dict[str, Any],
+    model: nn.Module,
+) -> Optimizer:
+    optimizer_config = training_config.get("optimizer", {})
+    optimizer_name = optimizer_config.get("name")
+    optimizer_params = optimizer_config.get("params", {})
 
-    if optim_name is None:
+    if optimizer_name is None:
         raise ValueError(
-            "Training config must contain a 'criterion' field"
-        )
-    
-    if optim_name not in OPTIMIZER_REGISTRY:
-        valid_optims = ", ".join(OPTIMIZER_REGISTRY)
-        raise ValueError(
-            f"Unknown optimizer {optim_name!r}. "
-            f"Expected one of: {valid_optims}"
+            "Training config must contain a "
+            "'training.optimizer.name' field."
         )
 
-    return OPTIMIZER_REGISTRY[optim_name](model.parameters(), **optim_params)
+    if optimizer_name not in OPTIMIZER_REGISTRY:
+        valid_optimizers = ", ".join(OPTIMIZER_REGISTRY)
+        raise ValueError(
+            f"Unknown optimizer {optimizer_name!r}. "
+            f"Expected one of: {valid_optimizers}."
+        )
+
+    optimizer_class = OPTIMIZER_REGISTRY[optimizer_name]
+
+    return optimizer_class(
+        model.parameters(),
+        **optimizer_params,
+    )
 
 def load_scheduler(
-    training_config: dict[str, Any] | None,
-    optimizer: optim.Optimizer,
+    training_config: dict[str, Any],
+    optimizer: Optimizer,
 ) -> LRScheduler | None:
-    scheduler_name = training_config.get("scheduler", {}).get("name", None)
-    scheduler_params = training_config.get("scheduler", {}).get("params", {})
+    scheduler_config = training_config.get("scheduler")
+
+    if scheduler_config is None:
+        return None
+
+    scheduler_name = scheduler_config.get("name")
+    scheduler_params = scheduler_config.get("params", {})
 
     if scheduler_name is None:
-        raise ValueError(
-            "Training config must contain a 'scheduler' field"
-        )
-    
+        return None
+
     if scheduler_name not in SCHEDULER_REGISTRY:
         valid_schedulers = ", ".join(SCHEDULER_REGISTRY)
         raise ValueError(
             f"Unknown scheduler {scheduler_name!r}. "
-            f"Expected one of: {valid_schedulers}"
+            f"Expected one of: {valid_schedulers}."
         )
 
-    return SCHEDULER_REGISTRY[scheduler_name](optimizer, **scheduler_params)
+    scheduler_class = SCHEDULER_REGISTRY[scheduler_name]
+
+    return scheduler_class(
+        optimizer,
+        **scheduler_params,
+    )
 
 
 def load_runner_dict(

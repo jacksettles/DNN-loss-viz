@@ -78,7 +78,7 @@ def _get_cifar10_datasets(
 
 def get_cifar10_loaders(
     config: DataConfig,
-) -> tuple[DataLoader, DataLoader]:
+) -> dict[str, DataLoader | None]:
     train_dataset, test_dataset = _get_cifar10_datasets(config)
 
     train_loader = DataLoader(
