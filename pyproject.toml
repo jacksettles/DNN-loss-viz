@@ -9,6 +9,11 @@ requires-python = ">=3.11"
 dependencies = [
     "torch",
     "torchvision",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "PyYAML",
+    "tqdm",
 ]
 
 [tool.setuptools.packages.find]
