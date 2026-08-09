@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Sequence, Literal
+from typing import Any, Literal  # CHANGED: removed Sequence, added Any
 
 
 ActivationName = Literal[
@@ -10,16 +10,21 @@ ActivationName = Literal[
     "gelu",
 ]
 
+
 @dataclass
 class ConvLayerConfig:
     out_channels: int
     kernel_size: int = 3
     stride: int = 1
-    padding: int = 0
+
+    padding: int = 1
+
     use_batch_norm: bool = True
     use_max_pool: bool = True
     pool_kernel_size: int = 2
-    use_skip_connection: bool = True
+
+    use_skip_connection: bool = False
+
 
 @dataclass
 class CNNConfig:
@@ -28,9 +33,9 @@ class CNNConfig:
 
     conv_layers: list[ConvLayerConfig] = field(
         default_factory=lambda: [
-            ConvLayerConfig(out_channels=32, use_skip_connection=False),
-            ConvLayerConfig(out_channels=64, use_skip_connection=False),
-            ConvLayerConfig(out_channels=128, use_skip_connection=False)
+            ConvLayerConfig(out_channels=32),
+            ConvLayerConfig(out_channels=64),
+            ConvLayerConfig(out_channels=128),
         ]
     )
 
@@ -38,9 +43,23 @@ class CNNConfig:
         default_factory=lambda: [128]
     )
 
-    hidden_dim: int = 128
     dropout: float = 0.0
 
     activation: ActivationName = "relu"
     classifier_activation: ActivationName | None = None
     leaky_relu_slope: float = 0.01
+
+    @classmethod
+    def from_dict(
+        cls,
+        config: dict[str, Any],
+    ) -> "CNNConfig":
+        config = config.copy()
+
+        if "conv_layers" in config:
+            config["conv_layers"] = [
+                ConvLayerConfig(**layer_config)
+                for layer_config in config["conv_layers"]
+            ]
+
+        return cls(**config)

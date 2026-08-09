@@ -1,7 +1,17 @@
 from __future__ import annotations
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
+logger = logging.getLogger(__name__)
+
 from typing import Any, TYPE_CHECKING
 from pathlib import Path
+import torch.cuda as t_cuda
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = PROJECT_ROOT / "configs"
@@ -28,10 +38,12 @@ def load_configs(
 
     for yaml_path in sorted(config_dir.glob("*.yaml")):
         with yaml_path.open("r", encoding="utf-8") as file:
-            configs[yaml_path.stem] = yaml.safe_load(file) or {}
+            file_config = yaml.safe_load(file) or {}
+        configs.update(file_config)
     return configs
 
 def load_model(config: dict[str, Any]) -> nn.Module:
+    logger.info("Loading model object...")
     model_dict = config.get("model", {})
 
     model_name = model_dict.get("name")
@@ -58,16 +70,19 @@ def load_model(config: dict[str, Any]) -> nn.Module:
     else:
         model_config = config_class(**model_params)
 
+
     return model_class(model_config)
 
 def load_data(config: dict)-> dict[str, DataLoader | None]:
+    logger.info("Loading data...")
     raw_data_config = config.get("data", {})
 
+    pin_mem = t_cuda.is_available() and raw_data_config.get("pin_memory", True)
     data_config = DataConfig(
         data_dir=DATA_DIR,
         batch_size=raw_data_config.get("batch_size", 128),
         num_workers=raw_data_config.get("num_workers", 2),
-        pin_memory=raw_data_config.get("pin_memory", True),
+        pin_memory=pin_mem,
         download=raw_data_config.get("download", True),
         use_augmentation=raw_data_config.get(
             "use_augmentation",
@@ -87,11 +102,13 @@ def load_data(config: dict)-> dict[str, DataLoader | None]:
             f"Unknown dataset {data_name!r}. "
             f"Expected one of: {valid_datasets}."
         )
+    logger.info("Loading %s from %s", data_name, data_config.data_dir)
     return DATA_REGISTRY[data_name](data_config)
 
 def load_criterion(
     training_config: dict[str, Any],
 ) -> nn.Module:
+    logger.info("Loading criterion...")
     criterion_config = training_config.get("criterion", {})
     criterion_name = criterion_config.get("name")
     criterion_params = criterion_config.get("params", {})
@@ -118,6 +135,7 @@ def load_optimizer(
     training_config: dict[str, Any],
     model: nn.Module,
 ) -> Optimizer:
+    logger.info("Loading optimizer...")
     optimizer_config = training_config.get("optimizer", {})
     optimizer_name = optimizer_config.get("name")
     optimizer_params = optimizer_config.get("params", {})
@@ -146,6 +164,7 @@ def load_scheduler(
     training_config: dict[str, Any],
     optimizer: Optimizer,
 ) -> LRScheduler | None:
+    logger.info("Loading LR scheduler...")
     scheduler_config = training_config.get("scheduler")
 
     if scheduler_config is None:
@@ -175,9 +194,9 @@ def load_scheduler(
 def load_runner_dict(
     config: dict[str, Any],
 ) -> dict[str, Any]:
-
     model = load_model(config)
     data = load_data(config)
+
     train_data = data["train_data"]
     val_data = data["val_data"]
     test_data = data["test_data"]
@@ -186,14 +205,13 @@ def load_runner_dict(
 
     criterion = load_criterion(training_config)
     optimizer = load_optimizer(training_config, model)
-
     scheduler = load_scheduler(training_config, optimizer)
 
     checkpoint_config = config.get("checkpointing", {})
     checkpoint_dir = PROJECT_ROOT / checkpoint_config.get("directory", "checkpoints")
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    snapshot_path = checkpoint_dir / "latest.pt"
+    snapshot_path = checkpoint_dir
     num_epochs = training_config.get("num_epochs", 10)
     return {
         "model": model,
@@ -208,9 +226,14 @@ def load_runner_dict(
     }
 
 def main(config):
+    logger.info("Loading runner dictionary of items...")
     runner_dict = load_runner_dict(config)
+
+    logger.info("Building trainer object...")
     trainer = Trainer(**runner_dict)
-    trainer.train(config)
+
+    logger.info("Commencing training...")
+    trainer.train()
 
 
 if __name__ == "__main__":
