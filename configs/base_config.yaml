@@ -35,7 +35,7 @@ data:
   use_augmentation: true
 
 training:
-  num_epochs: 10
+  num_epochs: 3
 
   criterion:
     name: "cross_entropy_loss"
@@ -54,6 +54,7 @@ training:
 
 checkpointing:
   directory: "checkpoints"
+  
   save_every: 1
   save_initial: true
   save_final: true

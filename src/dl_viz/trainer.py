@@ -11,13 +11,19 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 from datetime import datetime
-# from sklearn.metrics import (
-#     f1_score,
-#     confusion_matrix,
-#     classification_report,
-# )
 
 from dl_viz.data import get_cifar10_loaders
+from dl_viz.landscape.directions import (
+    create_random_direction,
+    filter_normalize_direction,
+)
+from dl_viz.landscape.parameters import (
+    get_parameter_state,
+    apply_direction,
+    set_parameter_state,
+    apply_two_directions
+)
+from dl_viz.landscape.plotting import plot_loss_surface_3d
 
 class Trainer:
     def __init__(
@@ -129,34 +135,103 @@ class Trainer:
             "training_num_samples": total,
         }
 
-    def _run_eval(self):
-        self.model.eval() # no grad tracking
-
-        eval_data = self.val_data if self.val_data else self.test_data
-        eval_data_name = "Validation" if self.val_data else "Test"
+    def _evaluate_loader(
+        self,
+        data: DataLoader,
+        desc: str,
+    ):
+        self.model.eval()
 
         running_loss = torch.tensor(0.0, device=self.device)
         correct = 0
         total = 0
 
         with torch.no_grad():
-            for batch in tqdm(eval_data, desc=f"Eval on {eval_data_name}", total=len(eval_data)):
+            for batch in tqdm(data, desc=desc, total=len(data)):
                 features = batch[0].to(self.device)
                 targets = batch[1].to(self.device).long()
-                outputs = self.model(features)
 
+                outputs = self.model(features)
                 loss = self.criterion(outputs, targets)
+
                 batch_size = targets.size(0)
 
                 running_loss += loss.item() * batch_size
-                correct += (outputs.argmax(dim=1) == targets).sum().item()
+                correct += (
+                    outputs.argmax(dim=1) == targets
+                ).sum().item()
                 total += batch_size
 
-            return {
-                "eval_loss": (running_loss / total).item(),
-                "eval_accuracy": correct / total,
-                "eval_num_samples": total,
-            }
+        return {
+            "loss": (running_loss / total).item(),
+            "accuracy": correct / total,
+            "num_samples": total,
+        }
+
+    def _run_eval(self):
+        eval_data = self.val_data if self.val_data else self.test_data
+        eval_data_name = "Validation" if self.val_data else "Test"
+
+        metrics = self._evaluate_loader(
+            data=eval_data,
+            desc=f"Eval on {eval_data_name}",
+        )
+
+        return {
+            "eval_loss": metrics["loss"],
+            "eval_accuracy": metrics["accuracy"],
+            "eval_num_samples": metrics["num_samples"],
+        }
+    
+    def _run_landscape_2d(
+        self,
+        alphas: list[float],
+        betas: list[float],
+    ):
+        base_state = get_parameter_state(self.model)
+
+        direction_x = create_random_direction(self.model)
+        direction_x = filter_normalize_direction(
+            self.model,
+            direction_x,
+        )
+
+        direction_y = create_random_direction(self.model)
+        direction_y = filter_normalize_direction(
+            self.model,
+            direction_y,
+        )
+
+        landscape = []
+
+        for alpha in alphas:
+            for beta in betas:
+                apply_two_directions(
+                    model=self.model,
+                    base_state=base_state,
+                    direction_x=direction_x,
+                    direction_y=direction_y,
+                    alpha=alpha,
+                    beta=beta,
+                )
+
+                metrics = self._evaluate_loader(
+                    data=self.train_data,
+                    desc=f"Landscape a={alpha:.2f}, b={beta:.2f}",
+                )
+
+                landscape.append({
+                    "alpha": alpha,
+                    "beta": beta,
+                    "loss": metrics["loss"],
+                })
+
+        set_parameter_state(
+            model=self.model,
+            state=base_state,
+        )
+
+        return landscape
 
     def train(self):
         baseline_metrics = {
@@ -176,7 +251,20 @@ class Trainer:
 
             train_metrics = self._run_epoch(epoch)
             eval_metrics = self._run_eval()
+
             epoch_metrics = train_metrics | eval_metrics
             epoch_metrics['stage'] = "training"
             metric_dicts.append(epoch_metrics)
+
+            if epoch == self.num_epochs:
+                landscape = self._run_landscape_2d(
+                    alphas=[-1.0, -0.5, 0.0, 0.5, 1.0],
+                    betas=[-1.0, -0.5, 0.0, 0.5, 1.0],
+                )
+
+                plot_loss_surface_3d(
+                    landscape=landscape,
+                    save_path=self.snapshot_path / "landscapes" / f"{self.run_name}_surface.png",
+                )
+
             self._save_snapshot(metric_dicts, epoch)

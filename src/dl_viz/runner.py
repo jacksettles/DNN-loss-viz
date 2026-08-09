@@ -9,6 +9,8 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+import sys
+import torch
 from typing import Any, TYPE_CHECKING
 from pathlib import Path
 import torch.cuda as t_cuda
@@ -29,6 +31,8 @@ if TYPE_CHECKING:
 from dl_viz.trainer import Trainer
 from dl_viz.data import DataConfig
 from dl_viz.registries import DATA_REGISTRY, MODEL_REGISTRY, LOSS_REGISTRY, OPTIMIZER_REGISTRY, SCHEDULER_REGISTRY
+from dl_viz.landscape.directions import create_random_direction, filter_normalize_direction
+from dl_viz.landscape.parameters import get_parameter_state, set_parameter_state, apply_direction
 
 
 def load_configs(
@@ -209,7 +213,6 @@ def load_runner_dict(
 
     checkpoint_config = config.get("checkpointing", {})
     checkpoint_dir = PROJECT_ROOT / checkpoint_config.get("directory", "checkpoints")
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     snapshot_path = checkpoint_dir
     num_epochs = training_config.get("num_epochs", 10)
