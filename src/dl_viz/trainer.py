@@ -25,6 +25,22 @@ from dl_viz.landscape.parameters import (
 )
 from dl_viz.landscape.plotting import plot_loss_surface_3d
 
+ALPHAS = [
+    -1.0, -0.9, -0.8, -0.7, -0.6,
+    -0.5, -0.4, -0.3, -0.2, -0.1,
+     0.0,
+     0.1,  0.2,  0.3,  0.4,  0.5,
+     0.6,  0.7,  0.8,  0.9,  1.0,
+]
+
+BETAS = [
+    -1.0, -0.9, -0.8, -0.7, -0.6,
+    -0.5, -0.4, -0.3, -0.2, -0.1,
+     0.0,
+     0.1,  0.2,  0.3,  0.4,  0.5,
+     0.6,  0.7,  0.8,  0.9,  1.0,
+]
+
 class Trainer:
     def __init__(
             self,
@@ -258,8 +274,8 @@ class Trainer:
 
             if epoch == self.num_epochs:
                 landscape = self._run_landscape_2d(
-                    alphas=[-1.0, -0.5, 0.0, 0.5, 1.0],
-                    betas=[-1.0, -0.5, 0.0, 0.5, 1.0],
+                    alphas=ALPHAS,
+                    betas=BETAS,
                 )
 
                 plot_loss_surface_3d(
