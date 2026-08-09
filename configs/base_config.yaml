@@ -35,7 +35,7 @@ data:
   use_augmentation: true
 
 training:
-  num_epochs: 3
+  num_epochs: 10
 
   criterion:
     name: "cross_entropy_loss"
