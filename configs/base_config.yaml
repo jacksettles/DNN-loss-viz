@@ -46,7 +46,7 @@ model:
 data:
   dataset: "cifar10"
   data_dir: "data"
-  batch_size: 1024
+  batch_size: 4096
   num_workers: 2
   use_augmentation: true
 

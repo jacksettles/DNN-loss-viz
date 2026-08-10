@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import numpy as np
 
 
@@ -51,3 +52,41 @@ def plot_loss_surface_3d(
     )
 
     plt.close(fig)
+
+
+def plot_loss_surface_3d_interactive(
+    landscape: list[dict],
+    save_path,
+) -> None:
+    alphas = sorted(set(point["alpha"] for point in landscape))
+    betas = sorted(set(point["beta"] for point in landscape))
+
+    Z = np.zeros((len(betas), len(alphas)))
+
+    for point in landscape:
+        alpha_idx = alphas.index(point["alpha"])
+        beta_idx = betas.index(point["beta"])
+
+        Z[beta_idx, alpha_idx] = point["loss"]
+
+    fig = go.Figure(
+        data=[
+            go.Surface(
+                x=alphas,
+                y=betas,
+                z=Z,
+                colorscale="Viridis",
+            )
+        ]
+    )
+
+    fig.update_layout(
+        title="Loss Landscape",
+        scene={
+            "xaxis_title": "Alpha",
+            "yaxis_title": "Beta",
+            "zaxis_title": "Loss",
+        },
+    )
+
+    fig.write_html(save_path)

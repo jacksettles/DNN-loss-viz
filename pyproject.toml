@@ -14,6 +14,7 @@ dependencies = [
     "matplotlib",
     "PyYAML",
     "tqdm",
+    "plotly",
 ]
 
 [tool.setuptools.packages.find]
