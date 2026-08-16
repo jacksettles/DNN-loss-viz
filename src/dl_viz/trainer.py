@@ -12,18 +12,16 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-from dl_viz.data import get_cifar10_loaders
 from dl_viz.landscape.directions import (
     create_random_direction,
     filter_normalize_direction,
 )
 from dl_viz.landscape.parameters import (
     get_parameter_state,
-    apply_direction,
     set_parameter_state,
     apply_two_directions
 )
-from dl_viz.landscape.plotting import plot_loss_surface_3d
+from dl_viz.landscape.plotting import plot_loss_surface_3d, plot_loss_surface_3d_interactive
 
 ALPHAS = [
     -1.0, -0.9, -0.8, -0.7, -0.6,
@@ -249,7 +247,7 @@ class Trainer:
 
         return landscape
 
-    def train(self):
+    def train(self, visualize_loss: bool=False):
         baseline_metrics = {
             "epoch": 0,
             "learning_rate": self.optimizer.param_groups[0]["lr"],
@@ -272,13 +270,13 @@ class Trainer:
             epoch_metrics['stage'] = "training"
             metric_dicts.append(epoch_metrics)
 
-            if epoch == self.num_epochs:
+            if (epoch == self.num_epochs) and (visualize_loss):
                 landscape = self._run_landscape_2d(
                     alphas=ALPHAS,
                     betas=BETAS,
                 )
 
-                plot_loss_surface_3d(
+                plot_loss_surface_3d_interactive(
                     landscape=landscape,
                     save_path=self.snapshot_path / "landscapes" / f"{self.run_name}_surface.png",
                 )

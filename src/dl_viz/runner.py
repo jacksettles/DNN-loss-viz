@@ -235,8 +235,9 @@ def main(config):
     logger.info("Building trainer object...")
     trainer = Trainer(**runner_dict)
 
+    loss_viz = config.get("training", {}).get("visualize_loss", False)
     logger.info("Commencing training...")
-    trainer.train()
+    trainer.train(visualize_loss=loss_viz)
 
 
 if __name__ == "__main__":
