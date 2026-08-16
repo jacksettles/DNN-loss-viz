@@ -12,33 +12,10 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-from dl_viz.landscape.directions import (
-    create_random_direction,
-    filter_normalize_direction,
-)
-from dl_viz.landscape.parameters import (
-    get_parameter_state,
-    set_parameter_state,
-    apply_two_directions
-)
 from dl_viz.landscape.visualizer import LossLandscapeVisualizer
-from dl_viz.landscape.plotting import plot_loss_surface_3d, plot_loss_surface_3d_interactive
+from dl_viz.landscape.visualize_runner import ALPHAS, BETAS
+from dl_viz.landscape.plotting import plot_loss_surface_3d_interactive
 
-ALPHAS = [
-    -1.0, -0.9, -0.8, -0.7, -0.6,
-    -0.5, -0.4, -0.3, -0.2, -0.1,
-     0.0,
-     0.1,  0.2,  0.3,  0.4,  0.5,
-     0.6,  0.7,  0.8,  0.9,  1.0,
-]
-
-BETAS = [
-    -1.0, -0.9, -0.8, -0.7, -0.6,
-    -0.5, -0.4, -0.3, -0.2, -0.1,
-     0.0,
-     0.1,  0.2,  0.3,  0.4,  0.5,
-     0.6,  0.7,  0.8,  0.9,  1.0,
-]
 
 class Trainer:
     def __init__(
