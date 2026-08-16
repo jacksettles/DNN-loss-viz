@@ -1,0 +1,3 @@
+experiment:
+  name: "minicnn_cifar10_baseline"
+  seed: 42

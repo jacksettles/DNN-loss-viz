@@ -1,0 +1,6 @@
+checkpointing:
+  directory: "checkpoints"
+
+  save_every: 1
+  save_initial: true
+  save_final: true

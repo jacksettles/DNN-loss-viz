@@ -1,0 +1,16 @@
+landscape:
+  enabled: false
+
+  alpha_min: -1.0
+  alpha_max: 1.0
+  alpha_steps: 21
+
+  beta_min: -1.0
+  beta_max: 1.0
+  beta_steps: 21
+
+  data_split: "test"
+
+  save_raw_results: true
+  save_static_plot: true
+  save_interactive_plot: true
