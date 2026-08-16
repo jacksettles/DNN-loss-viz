@@ -21,6 +21,7 @@ from dl_viz.landscape.parameters import (
     set_parameter_state,
     apply_two_directions
 )
+from dl_viz.landscape.visualizer import LossLandscapeVisualizer
 from dl_viz.landscape.plotting import plot_loss_surface_3d, plot_loss_surface_3d_interactive
 
 ALPHAS = [
@@ -196,56 +197,6 @@ class Trainer:
             "eval_accuracy": metrics["accuracy"],
             "eval_num_samples": metrics["num_samples"],
         }
-    
-    def _run_landscape_2d(
-        self,
-        alphas: list[float],
-        betas: list[float],
-    ):
-        base_state = get_parameter_state(self.model)
-
-        direction_x = create_random_direction(self.model)
-        direction_x = filter_normalize_direction(
-            self.model,
-            direction_x,
-        )
-
-        direction_y = create_random_direction(self.model)
-        direction_y = filter_normalize_direction(
-            self.model,
-            direction_y,
-        )
-
-        landscape = []
-
-        for alpha in alphas:
-            for beta in betas:
-                apply_two_directions(
-                    model=self.model,
-                    base_state=base_state,
-                    direction_x=direction_x,
-                    direction_y=direction_y,
-                    alpha=alpha,
-                    beta=beta,
-                )
-
-                metrics = self._evaluate_loader(
-                    data=self.train_data,
-                    desc=f"Landscape a={alpha:.2f}, b={beta:.2f}",
-                )
-
-                landscape.append({
-                    "alpha": alpha,
-                    "beta": beta,
-                    "loss": metrics["loss"],
-                })
-
-        set_parameter_state(
-            model=self.model,
-            state=base_state,
-        )
-
-        return landscape
 
     def train(self, visualize_loss: bool=False):
         baseline_metrics = {
@@ -270,15 +221,26 @@ class Trainer:
             epoch_metrics['stage'] = "training"
             metric_dicts.append(epoch_metrics)
 
-            if (epoch == self.num_epochs) and (visualize_loss):
-                landscape = self._run_landscape_2d(
+            if (epoch == self.num_epochs) and visualize_loss:
+                visualizer = LossLandscapeVisualizer(
+                    model=self.model,
+                    data=self.train_data,
+                    criterion=self.criterion,
+                    device=self.device,
+                )
+
+                landscape = visualizer.compute_2d_landscape(
                     alphas=ALPHAS,
                     betas=BETAS,
                 )
 
                 plot_loss_surface_3d_interactive(
                     landscape=landscape,
-                    save_path=self.snapshot_path / "landscapes" / f"{self.run_name}_surface.png",
+                    save_path=(
+                        self.snapshot_path
+                        / "landscapes"
+                        / f"{self.run_name}_surface.png"
+                    ),
                 )
 
             self._save_snapshot(metric_dicts, epoch)
