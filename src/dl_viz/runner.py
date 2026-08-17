@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import argparse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -235,6 +236,13 @@ def load_runner_dict(
     config: dict[str, Any],
     experiment_id: str,
 ) -> dict[str, Any]:
+    experiment_name = config.get("experiments", {}).get(experiment_id, {}).get("name")
+    if experiment_name is None:
+        raise ValueError(
+            f"The value in the 'name' field for experiment_id: {experiment_id} came back as None",
+            f"Please provide a value in the 'name' field for experiment_id: {experiment_id}"
+        )
+    
     model = load_model(
         config=config,
         experiment_id=experiment_id,
@@ -283,6 +291,7 @@ def load_runner_dict(
         "scheduler": scheduler,
         "snapshot_path": checkpoint_dir,
         "num_epochs": num_epochs,
+        "experiment_name": experiment_name,
     }
 
 def main(
@@ -303,10 +312,38 @@ def main(
     trainer.train()
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Run one or more training experiments."
+    )
+
+    parser.add_argument(
+        "experiment_ids",
+        nargs="+",
+        help="Experiment IDs to run, or 'all' to run every configured experiment.",
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
     config = load_configs()
 
-    main(
-        config=config,
-        experiment_id="exp_002",
-    )
+    if "all" in args.experiment_ids and args.experiment_ids != ["all"]:
+        raise ValueError(
+            "'all' cannot be combined with individual experiment IDs."
+        )
+
+    if args.experiment_ids == ["all"]:
+        experiment_ids = list(
+            config.get("experiments", {}).keys()
+        )
+    else:
+        experiment_ids = args.experiment_ids
+
+    for experiment_id in experiment_ids:
+        main(
+            config=config,
+            experiment_id=experiment_id,
+        )

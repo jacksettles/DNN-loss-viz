@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import argparse
 from pathlib import Path
 from typing import Optional
 
@@ -107,28 +110,50 @@ class VisualizationRunner:
         return landscape
 
 
-def main():
-    config = load_configs()
-
-    landscape_config = config.get("landscape", {})
-
-    experiment_id = landscape_config.get("experiment_id")
-
-    if experiment_id is None:
+def main(
+    config: dict,
+    experiment_id: str,
+) -> None:
+    experiments = config.get("experiments", {})
+    experiment_name = experiments.get(experiment_id, {}).get("name")
+    if experiment_name is None:
         raise ValueError(
-            "Landscape config must contain "
-            "'landscape.experiment_id'."
+            f"The value in the 'name' field for experiment_id: {experiment_id} came back as None",
+            f"Please provide a value in the 'name' field for experiment_id: {experiment_id}"
         )
 
-    checkpoint_path = landscape_config.get("checkpoint_path")
+    if experiment_id not in experiments:
+        valid_experiments = ", ".join(experiments)
 
-    if checkpoint_path is None:
         raise ValueError(
-            "Landscape config must contain "
-            "'landscape.checkpoint_path'."
+            f"Unknown experiment {experiment_id!r}. "
+            f"Expected one of: {valid_experiments}."
         )
 
-    checkpoint_path = PROJECT_ROOT / checkpoint_path
+    landscape_config = config.get(
+        "landscape",
+        {},
+    )
+
+    checkpoint_config = config.get(
+        "checkpointing",
+        {},
+    )
+
+    checkpoint_dir = (
+        PROJECT_ROOT
+        / checkpoint_config.get(
+            "directory",
+            "checkpoints",
+        )
+    )
+
+    checkpoint_path = (
+        checkpoint_dir
+        / experiment_name
+        / "latest"
+        / "*.pt"
+    )
 
     if not checkpoint_path.exists():
         raise FileNotFoundError(
@@ -161,28 +186,48 @@ def main():
             f"Data split {data_split!r} is not available."
         )
 
-    training_config = config.get("training", {})
+    training_config = config.get(
+        "training",
+        {},
+    )
 
-    criterion = load_criterion(training_config)
+    criterion = load_criterion(
+        training_config,
+    )
 
     alphas = np.linspace(
-        landscape_config.get("alpha_min", -1.0),
-        landscape_config.get("alpha_max", 1.0),
-        landscape_config.get("alpha_steps", 21),
+        landscape_config.get(
+            "alpha_min",
+            -1.0,
+        ),
+        landscape_config.get(
+            "alpha_max",
+            1.0,
+        ),
+        landscape_config.get(
+            "alpha_steps",
+            21,
+        ),
     ).tolist()
 
     betas = np.linspace(
-        landscape_config.get("beta_min", -1.0),
-        landscape_config.get("beta_max", 1.0),
-        landscape_config.get("beta_steps", 21),
+        landscape_config.get(
+            "beta_min",
+            -1.0,
+        ),
+        landscape_config.get(
+            "beta_max",
+            1.0,
+        ),
+        landscape_config.get(
+            "beta_steps",
+            21,
+        ),
     ).tolist()
 
     output_dir = (
-        PROJECT_ROOT
-        / landscape_config.get(
-            "output_dir",
-            f"checkpoints/landscapes/{experiment_id}",
-        )
+        checkpoint_dir
+        / experiment_name
     )
 
     runner = VisualizationRunner(
@@ -211,5 +256,47 @@ def main():
     )
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Visualize one or more trained experiments."
+    )
+
+    parser.add_argument(
+        "experiment_ids",
+        nargs="+",
+        help=(
+            "Experiment IDs to visualize, or 'all' "
+            "to visualize every configured experiment."
+        ),
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    config = load_configs()
+
+    if (
+        "all" in args.experiment_ids
+        and args.experiment_ids != ["all"]
+    ):
+        raise ValueError(
+            "'all' cannot be combined with individual experiment IDs."
+        )
+
+    if args.experiment_ids == ["all"]:
+        experiment_ids = list(
+            config.get(
+                "experiments",
+                {},
+            ).keys()
+        )
+    else:
+        experiment_ids = args.experiment_ids
+
+    for experiment_id in experiment_ids:
+        main(
+            config=config,
+            experiment_id=experiment_id,
+        )

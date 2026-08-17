@@ -1,7 +1,4 @@
 landscape:
-  experiment_id: "exp_002"
-
-  checkpoint_path: "checkpoints/latest/model_2026-08-17.pt"
 
   alpha_min: -1.0
   alpha_max: 1.0

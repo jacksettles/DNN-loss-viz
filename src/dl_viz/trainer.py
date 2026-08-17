@@ -22,9 +22,10 @@ class Trainer:
             test_data: DataLoader,
             criterion: nn.CrossEntropyLoss,
             optimizer: optim.AdamW,
+            scheduler: Optional[optim.lr_scheduler._LRScheduler],
             snapshot_path: str,
             num_epochs: int,
-            scheduler: Optional[optim.lr_scheduler._LRScheduler]
+            experiment_name: str,
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
@@ -35,9 +36,10 @@ class Trainer:
         self.optimizer = optimizer
         self.epochs_run = 0
         self.num_epochs = num_epochs
-        self.snapshot_path = snapshot_path
+        self.snapshot_path = snapshot_path / experiment_name
         self.scheduler = scheduler
         self.run_name = datetime.now().strftime("model_%Y-%m-%d")
+        self.experiment_name = experiment_name
 
     def _load_snapshot(self):
         pass
