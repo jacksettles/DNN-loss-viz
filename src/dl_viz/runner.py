@@ -299,12 +299,8 @@ def main(
     logger.info("Building trainer object...")
     trainer = Trainer(**runner_dict)
 
-    loss_viz = config.get("training", {}).get("visualize_loss", False)
-
     logger.info("Commencing training...")
-    trainer.train(
-        visualize_loss=loss_viz
-    )
+    trainer.train()
 
 
 if __name__ == "__main__":

@@ -15,5 +15,3 @@ training:
     params:
       step_size: 5
       gamma: 0.1
-
-  visualize_loss: false
