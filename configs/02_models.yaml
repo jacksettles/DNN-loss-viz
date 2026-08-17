@@ -1,14 +1,16 @@
-model:
-  name: "MiniCNN"
+models:
+  minicnn_small:
+    name: "MiniCNN"
 
-  params:
-    in_channels: 3
-    num_classes: 10
-    activation: "relu"
-    classifier_hidden_dims: [128]
+    params:
+      in_channels: 3
+      num_classes: 10
+      activation: "relu"
+      classifier_hidden_dims: [128]
 
-    conv_layers:
-      - out_channels: 32
+      conv_channels: [32, 64, 128]
+
+      conv_defaults:
         kernel_size: 3
         stride: 1
         padding: 1
@@ -16,7 +18,18 @@ model:
         use_max_pool: true
         use_skip_connection: false
 
-      - out_channels: 64
+  minicnn_medium:
+    name: "MiniCNN"
+
+    params:
+      in_channels: 3
+      num_classes: 10
+      activation: "relu"
+      classifier_hidden_dims: [256]
+
+      conv_channels: [32, 64, 128, 256]
+
+      conv_defaults:
         kernel_size: 3
         stride: 1
         padding: 1
@@ -24,18 +37,21 @@ model:
         use_max_pool: true
         use_skip_connection: false
 
-      - out_channels: 128
-        kernel_size: 3
-        stride: 1
-        padding: 1
-        use_batch_norm: true
-        use_max_pool: true
-        use_skip_connection: false
+  minicnn_large:
+    name: "MiniCNN"
 
-      - out_channels: 256
+    params:
+      in_channels: 3
+      num_classes: 10
+      activation: "relu"
+      classifier_hidden_dims: [512, 256]
+
+      conv_channels: [64, 128, 256, 512]
+
+      conv_defaults:
         kernel_size: 3
         stride: 1
         padding: 1
         use_batch_norm: true
         use_max_pool: true
-        use_skip_connection: false
+        use_skip_connection: true

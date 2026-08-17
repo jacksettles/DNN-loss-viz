@@ -56,7 +56,19 @@ class CNNConfig:
     ) -> "CNNConfig":
         config = config.copy()
 
-        if "conv_layers" in config:
+        if "conv_channels" in config:
+            conv_channels = config.pop("conv_channels")
+            conv_defaults = config.pop("conv_defaults", {})
+
+            config["conv_layers"] = [
+                ConvLayerConfig(
+                    out_channels=out_channels,
+                    **conv_defaults,
+                )
+                for out_channels in conv_channels
+            ]
+
+        elif "conv_layers" in config:
             config["conv_layers"] = [
                 ConvLayerConfig(**layer_config)
                 for layer_config in config["conv_layers"]

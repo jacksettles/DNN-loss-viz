@@ -31,8 +31,6 @@ if TYPE_CHECKING:
 from dl_viz.trainer import Trainer
 from dl_viz.data import DataConfig
 from dl_viz.registries import DATA_REGISTRY, MODEL_REGISTRY, LOSS_REGISTRY, OPTIMIZER_REGISTRY, SCHEDULER_REGISTRY
-from dl_viz.landscape.directions import create_random_direction, filter_normalize_direction
-from dl_viz.landscape.parameters import get_parameter_state, set_parameter_state, apply_direction
 
 
 def load_configs(
@@ -46,26 +44,58 @@ def load_configs(
         configs.update(file_config)
     return configs
 
-def load_model(config: dict[str, Any]) -> nn.Module:
+def load_model(
+    config: dict[str, Any],
+    experiment_id: str,
+) -> nn.Module:
     logger.info("Loading model object...")
-    model_dict = config.get("model", {})
+
+    experiments = config.get("experiments", {})
+    models = config.get("models", {})
+
+    if experiment_id not in experiments:
+        valid_experiments = ", ".join(experiments)
+        raise ValueError(
+            f"Unknown experiment {experiment_id!r}. "
+            f"Expected one of: {valid_experiments}."
+        )
+
+    experiment_config = experiments[experiment_id]
+
+    model_id = experiment_config.get("model_id")
+
+    if model_id is None:
+        raise ValueError(
+            f"Experiment {experiment_id!r} must contain "
+            f"a 'model_id' field."
+        )
+
+    if model_id not in models:
+        valid_model_ids = ", ".join(models)
+        raise ValueError(
+            f"Unknown model ID {model_id!r}. "
+            f"Expected one of: {valid_model_ids}."
+        )
+
+    model_dict = models[model_id]
 
     model_name = model_dict.get("name")
     model_params = model_dict.get("params", {})
 
     if model_name is None:
         raise ValueError(
-            "Model config must contain a 'model.name' field."
+            f"Model {model_id!r} must contain a 'name' field."
         )
 
     if model_name not in MODEL_REGISTRY:
         valid_models = ", ".join(MODEL_REGISTRY)
         raise ValueError(
-            f"Unknown model {model_name!r}. "
+            f"Unknown model class {model_name!r}. "
             f"Expected one of: {valid_models}."
         )
 
     registry_entry = MODEL_REGISTRY[model_name]
+
     model_class = registry_entry["model_class"]
     config_class = registry_entry["config_class"]
 
@@ -74,6 +104,12 @@ def load_model(config: dict[str, Any]) -> nn.Module:
     else:
         model_config = config_class(**model_params)
 
+    logger.info(
+        "Using experiment %s -> model %s (%s)",
+        experiment_id,
+        model_id,
+        model_name,
+    )
 
     return model_class(model_config)
 
@@ -197,8 +233,13 @@ def load_scheduler(
 
 def load_runner_dict(
     config: dict[str, Any],
+    experiment_id: str,
 ) -> dict[str, Any]:
-    model = load_model(config)
+    model = load_model(
+        config=config,
+        experiment_id=experiment_id,
+    )
+
     data = load_data(config)
 
     train_data = data["train_data"]
@@ -209,13 +250,29 @@ def load_runner_dict(
 
     criterion = load_criterion(training_config)
     optimizer = load_optimizer(training_config, model)
-    scheduler = load_scheduler(training_config, optimizer)
+    scheduler = load_scheduler(
+        training_config,
+        optimizer,
+    )
 
-    checkpoint_config = config.get("checkpointing", {})
-    checkpoint_dir = PROJECT_ROOT / checkpoint_config.get("directory", "checkpoints")
+    checkpoint_config = config.get(
+        "checkpointing",
+        {},
+    )
 
-    snapshot_path = checkpoint_dir
-    num_epochs = training_config.get("num_epochs", 10)
+    checkpoint_dir = (
+        PROJECT_ROOT
+        / checkpoint_config.get(
+            "directory",
+            "checkpoints",
+        )
+    )
+
+    num_epochs = training_config.get(
+        "num_epochs",
+        10,
+    )
+
     return {
         "model": model,
         "train_data": train_data,
@@ -224,22 +281,36 @@ def load_runner_dict(
         "criterion": criterion,
         "optimizer": optimizer,
         "scheduler": scheduler,
-        "snapshot_path": snapshot_path,
+        "snapshot_path": checkpoint_dir,
         "num_epochs": num_epochs,
     }
 
-def main(config):
-    logger.info("Loading runner dictionary of items...")
-    runner_dict = load_runner_dict(config)
+def main(
+    config: dict[str, Any],
+    experiment_id: str,
+):
+    logger.info("Loading experiment %s", experiment_id)
+
+    runner_dict = load_runner_dict(
+        config=config,
+        experiment_id=experiment_id,
+    )
 
     logger.info("Building trainer object...")
     trainer = Trainer(**runner_dict)
 
     loss_viz = config.get("training", {}).get("visualize_loss", False)
+
     logger.info("Commencing training...")
-    trainer.train(visualize_loss=loss_viz)
+    trainer.train(
+        visualize_loss=loss_viz
+    )
 
 
 if __name__ == "__main__":
     config = load_configs()
-    main(config)
+
+    main(
+        config=config,
+        experiment_id="exp_002",
+    )
