@@ -12,10 +12,6 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-from dl_viz.landscape.visualizer import LossLandscapeVisualizer
-from dl_viz.landscape.visualize_runner import ALPHAS, BETAS
-from dl_viz.landscape.plotting import plot_loss_surface_3d_interactive
-
 
 class Trainer:
     def __init__(
@@ -175,7 +171,7 @@ class Trainer:
             "eval_num_samples": metrics["num_samples"],
         }
 
-    def train(self, visualize_loss: bool=False):
+    def train(self):
         baseline_metrics = {
             "epoch": 0,
             "learning_rate": self.optimizer.param_groups[0]["lr"],
@@ -197,27 +193,5 @@ class Trainer:
             epoch_metrics = train_metrics | eval_metrics
             epoch_metrics['stage'] = "training"
             metric_dicts.append(epoch_metrics)
-
-            if (epoch == self.num_epochs) and visualize_loss:
-                visualizer = LossLandscapeVisualizer(
-                    model=self.model,
-                    data=self.train_data,
-                    criterion=self.criterion,
-                    device=self.device,
-                )
-
-                landscape = visualizer.compute_2d_landscape(
-                    alphas=ALPHAS,
-                    betas=BETAS,
-                )
-
-                plot_loss_surface_3d_interactive(
-                    landscape=landscape,
-                    save_path=(
-                        self.snapshot_path
-                        / "landscapes"
-                        / f"{self.run_name}_surface.png"
-                    ),
-                )
 
             self._save_snapshot(metric_dicts, epoch)
