@@ -2,11 +2,11 @@ landscape:
 
   alpha_min: -1.0
   alpha_max: 1.0
-  alpha_steps: 21
+  alpha_steps: 5
 
   beta_min: -1.0
   beta_max: 1.0
-  beta_steps: 21
+  beta_steps: 5
 
   data_split: "test"
 
