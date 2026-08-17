@@ -10,8 +10,6 @@ landscape:
 
   data_split: "test"
 
-  output_dir: "checkpoints/landscapes/exp_002"
-
   save_raw_results: true
   save_static_plot: true
   save_interactive_plot: true
