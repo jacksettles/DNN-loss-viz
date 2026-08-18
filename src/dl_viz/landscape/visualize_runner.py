@@ -148,17 +148,28 @@ def main(
         )
     )
 
-    checkpoint_path = (
+    latest_dir = (
         checkpoint_dir
         / experiment_name
         / "latest"
-        / "*.pt"
     )
 
-    if not checkpoint_path.exists():
+    checkpoint_matches = list(
+        latest_dir.glob("*.pt")
+    )
+
+    if not checkpoint_matches:
         raise FileNotFoundError(
-            f"Checkpoint does not exist: {checkpoint_path}"
+            f"No checkpoint found in: {latest_dir}"
         )
+
+    if len(checkpoint_matches) > 1:
+        raise RuntimeError(
+            f"Multiple checkpoints found in {latest_dir}: "
+            f"{checkpoint_matches}"
+        )
+
+    checkpoint_path = checkpoint_matches[0]
 
     model = load_model(
         config=config,
