@@ -239,6 +239,7 @@ def main(
     output_dir = (
         checkpoint_dir
         / experiment_name
+        / "landscapes"
     )
 
     runner = VisualizationRunner(
